@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "413205298214",
+    "firebase_url": "https://fir-authenticationtest-e7571.firebaseio.com",
+    "project_id": "fir-authenticationtest-e7571",
+    "storage_bucket": "fir-authenticationtest-e7571.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:413205298214:android:477ba271f2978251",
+        "android_client_info": {
+          "package_name": "com.commutingcoder.firebaseauthenticationtest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "413205298214-8st683mnk2tir3ism7ro65ol4o3b1elt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB17aYbeOjUvFC4adVRTTjJ1_d_oZgbxuE"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
