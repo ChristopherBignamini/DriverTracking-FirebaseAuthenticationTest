@@ -17,14 +17,19 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 public class MainActivity extends AppCompatActivity {
 
     private final String TAG = "MainActivity";
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
+    private DatabaseReference mUsersReference;
 
     private EditText mEmailEditText;
+    private EditText mPhoneEditText;
+    private EditText mNameEditText;
     private EditText mPasswordEditText;
     private Button mSignUpButton;
     private Button mSignInButton;
@@ -33,6 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private Button mCheckStatusButton;
     private TextView mUserStatusText;
     private boolean mIsEmailValid;
+    private boolean mIsPhoneValid;
     private boolean mIsPasswordValid;
     private boolean mIsUserLoggedIn;
 
@@ -41,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Set up auth stuff
         mAuth = FirebaseAuth.getInstance();
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
@@ -58,13 +65,19 @@ public class MainActivity extends AppCompatActivity {
         };
 
 
+        // Setup reference to rt database
+        FirebaseDatabase database = FirebaseDatabase.getInstance();
+        mUsersReference = database.getReference("users");
+
         // User data setup
         // TODO: add SharedPreferences retrieval
         mIsEmailValid = false;
+        mIsPhoneValid = false;
         mIsPasswordValid = false;
 
         // UI elements wiring
         mEmailEditText = (EditText) findViewById(R.id.email_edit_text);
+        mPhoneEditText = (EditText) findViewById(R.id.phone_edit_text);
         mPasswordEditText = (EditText) findViewById(R.id.password_edit_text);
         mSignUpButton = (Button) findViewById(R.id.signup_button);
         mSignInButton = (Button) findViewById(R.id.signin_button);
@@ -93,6 +106,29 @@ public class MainActivity extends AppCompatActivity {
                 mIsEmailValid = true;
                 if(mIsEmailValid && mIsPasswordValid) {
                     mSignInButton.setEnabled(true);
+                    if(mIsPhoneValid) {
+                        mSignUpButton.setEnabled(true);
+                    }
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+        mPhoneEditText.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                // TODO: add missing check if needed
+                mIsPhoneValid = true;
+                if(mIsEmailValid && mIsPhoneValid && mIsPasswordValid) {
+                    mSignInButton.setEnabled(false);
                     mSignUpButton.setEnabled(true);
                 }
             }
@@ -112,9 +148,11 @@ public class MainActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 // TODO: add missing check if needed
                 mIsPasswordValid = true;
-                if(mIsEmailValid && mIsPasswordValid) {
+                if(mIsEmailValid && mIsPasswordValid) {// TODO: refactor the button activation code
                     mSignInButton.setEnabled(true);
-                    mSignUpButton.setEnabled(true);
+                    if(mIsPhoneValid) {
+                        mSignUpButton.setEnabled(true);
+                    }
                 }
             }
 
@@ -129,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 createAccount(mEmailEditText.getText().toString(),
+                        mPhoneEditText.getText().toString(),
                         mPasswordEditText.getText().toString());
             }
         });
@@ -183,7 +222,8 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void createAccount(String email, String password) {
+    // TODO: input pars not needed, can be obtained from data member
+    private void createAccount(String email, String phoneNumber, String password) {
         mAuth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                 @Override
@@ -197,12 +237,17 @@ public class MainActivity extends AppCompatActivity {
                     if (!task.isSuccessful()) {
                         Toast.makeText(getApplicationContext(),
                                 "Account creation error: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
+
                     } else {
+
+                        // Update user database
+                        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                        mUsersReference.child(user.getUid()).setValue(user.getEmail());// TODO: is Uid fine as node?
+
                         Toast.makeText(getApplicationContext(),
                                 "Account successfully created", Toast.LENGTH_LONG).show();
                     }
 
-                    // ...
 
                     // TODO: is the creation task asynchronous? In this case checkStatus must be here
                     // Check current user status
@@ -257,6 +302,44 @@ public class MainActivity extends AppCompatActivity {
             mUserStatusText.setText("Not logged in as");
             Log.d(TAG, "Not logged in");
             mIsUserLoggedIn = false;
+        }
+    }
+
+    // TODO: temporary design, find minimal set of data
+    private class UserData {
+
+        private String mName;
+        private String mPhoneNumber;
+        private String mEmail;
+
+        public UserData(String phoneNumber, String name, String email) {
+            mPhoneNumber = phoneNumber;
+            mName = name;
+            mEmail = email;
+        }
+
+        public String getEmail() {
+            return mEmail;
+        }
+
+        public void setEmail(String email) {
+            mEmail = email;
+        }
+
+        public String getName() {
+            return mName;
+        }
+
+        public void setName(String name) {
+            mName = name;
+        }
+
+        public String getPhoneNumber() {
+            return mPhoneNumber;
+        }
+
+        public void setPhoneNumber(String phoneNumber) {
+            mPhoneNumber = phoneNumber;
         }
     }
 }
