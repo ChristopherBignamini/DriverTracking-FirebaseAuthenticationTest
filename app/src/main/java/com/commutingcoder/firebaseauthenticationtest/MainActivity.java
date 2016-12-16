@@ -1,7 +1,12 @@
 package com.commutingcoder.firebaseauthenticationtest;
 
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -17,12 +22,23 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.Query;
+import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
+
+// TODO: online-offline status in user data-db: what about a singleton like in CriminalIntent
+// TODO: use a local sqlite db for current list of available contacts??
 
 public class MainActivity extends AppCompatActivity {
 
     private final String TAG = "MainActivity";
+    final static int MY_PERMISSIONS_READ_CONTACTS = 0;
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private DatabaseReference mUsersReference;
@@ -37,10 +53,14 @@ public class MainActivity extends AppCompatActivity {
     private Button mClearButton;
     private Button mCheckStatusButton;
     private TextView mUserStatusText;
+    private Button mChooseContactButton;
+    private TextView mContactChosenText;
     private boolean mIsEmailValid;
     private boolean mIsPhoneValid;
     private boolean mIsPasswordValid;
     private boolean mIsUserLoggedIn;
+    private String mFireBaseUid;
+    private List<UserData> mAppContacts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,11 +89,12 @@ public class MainActivity extends AppCompatActivity {
         FirebaseDatabase database = FirebaseDatabase.getInstance();
         mUsersReference = database.getReference("users");
 
-        // User data setup
+        // Users data setup
         // TODO: add SharedPreferences retrieval
         mIsEmailValid = false;
         mIsPhoneValid = false;
         mIsPasswordValid = false;
+        mAppContacts = new ArrayList<>();// TODO: add save/retrieval code accross lifetime steps (Local db?)
 
         // UI elements wiring
         mEmailEditText = (EditText) findViewById(R.id.email_edit_text);
@@ -85,10 +106,15 @@ public class MainActivity extends AppCompatActivity {
         mClearButton = (Button) findViewById(R.id.clear_button);
         mCheckStatusButton = (Button) findViewById(R.id.check_status_button);
         mUserStatusText = (TextView) findViewById(R.id.user_status_text);
+        mChooseContactButton = (Button) findViewById(R.id.choose_contact_button);
+        mContactChosenText = (TextView) findViewById(R.id.chosen_contact_text);
+
 
         // UI elements setup
+        // TODO: factorize button enabling code in method (and define rules...)
         mSignUpButton.setEnabled(false);
         mSignInButton.setEnabled(false);
+        mChooseContactButton.setEnabled(false);
 
         // Check current user status
         checkStatus();
@@ -206,6 +232,98 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        mChooseContactButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                // Access list of app users
+                Query userQuery = mUsersReference.orderByKey();
+                userQuery.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot dataSnapshot) {
+
+                        // TODO: very bad piece of code
+                        List<String> appUsersPhones = new ArrayList<String>();
+                        List<Boolean> appUsersStatus = new ArrayList<Boolean>();
+                        for (DataSnapshot singleSnapshot : dataSnapshot.getChildren()) {
+                            appUsersPhones.add(singleSnapshot.child("phone").getValue().toString());
+                            appUsersStatus.add((Boolean) singleSnapshot.child("status").getValue());
+                        }
+
+                        // TODO: check for best way to handle this, particularly first run aftewe install fails!!
+                        // Here, thisActivity is the current activity
+                        // TODO: use new requestPermissions
+                        if (ContextCompat.checkSelfPermission(getBaseContext(),
+                                android.Manifest.permission.READ_CONTACTS)
+                                != PackageManager.PERMISSION_GRANTED) {
+
+                            // Should we show an explanation?
+                            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,// TODO: I'm not sure about MainActivity.this
+                                    android.Manifest.permission.READ_CONTACTS)) {
+
+                                // Show an expanation to the user *asynchronously* -- don't block
+                                // this thread waiting for the user's response! After the user
+                                // sees the explanation, try again to request the permission.
+
+                            } else {
+
+                                // No explanation needed, we can request the permission.
+
+                                ActivityCompat.requestPermissions(MainActivity.this,// TODO: I'm not sure about MainActivity.this
+                                        new String[]{android.Manifest.permission.READ_CONTACTS},
+                                        MY_PERMISSIONS_READ_CONTACTS);
+
+                                // MY_PERMISSIONS_READ_CONTACTS is an
+                                // app-defined int constant. The callback method gets the
+                                // result of the request.
+                            }
+                        }
+
+                        String[] queryFields = new String[] {
+                                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                                ContactsContract.CommonDataKinds.Phone.NUMBER};
+
+                        Cursor cursor = MainActivity.this.getContentResolver()// TODO: I'm not sure about MainActivity.this
+                                .query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                                        queryFields,null,null,null);
+
+                        // TODO: find best way to do this search and avoid multiple search
+                        mAppContacts.clear();
+                        for(int userIndex=0;userIndex<appUsersPhones.size();++userIndex) {
+                            final String currentUserPhone = new String(appUsersPhones.get(userIndex));
+                            Log.d(TAG,"out");
+                            for (cursor.moveToFirst();!cursor.isAfterLast();cursor.moveToNext()) {
+                                Log.d(TAG,"in");
+                                if(cursor.getString(1) == currentUserPhone) {
+                                    mAppContacts.add(new UserData(cursor.getString(1),
+                                            cursor.getString(0),
+                                            appUsersStatus.get(userIndex)));
+                                }
+                            }
+                        }
+
+                        // TODO: Debug only
+                        for (int userIndex=0;userIndex<mAppContacts.size();++userIndex) {
+                            Log.d(TAG,"Contact number: " + userIndex +
+                                    " name: " + mAppContacts.get(userIndex).getName() +
+                                    " phone: " + mAppContacts.get(userIndex).getPhoneNumber() +
+                                    " status: " + mAppContacts.get(userIndex).getStatus());
+                        }
+
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError databaseError) {
+
+                    }
+                });
+
+
+
+
+            }
+        });
+
     }
 
     @Override
@@ -223,7 +341,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // TODO: input pars not needed, can be obtained from data member
-    private void createAccount(String email, String phoneNumber, String password) {
+    private void createAccount(String email, final String phoneNumber, String password) {
         mAuth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
                 @Override
@@ -242,8 +360,10 @@ public class MainActivity extends AppCompatActivity {
 
                         // Update user database
                         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-                        mUsersReference.child(user.getUid()).setValue(user.getEmail());// TODO: is Uid fine as node?
-
+                        mFireBaseUid = user.getUid();
+                        mUsersReference.child(mFireBaseUid).child("email").setValue(user.getEmail());// TODO: is Uid fine as node?
+                        // TODO: is there a way to get my phone number from contact list??
+                        mUsersReference.child(mFireBaseUid).child("phone").setValue(phoneNumber);
                         Toast.makeText(getApplicationContext(),
                                 "Account successfully created", Toast.LENGTH_LONG).show();
                     }
@@ -294,52 +414,19 @@ public class MainActivity extends AppCompatActivity {
             // The user's ID, unique to the Firebase project. Do NOT use this value to
             // authenticate with your backend server, if you have one. Use
             // FirebaseUser.getToken() instead.
-            String uid = user.getUid();
+            mFireBaseUid = user.getUid(); // TODO: this assignement is already done in createAccount
             Log.d(TAG, "User logged in with email: " + email);
             mUserStatusText.setText("Logged in with email " + email);
             mIsUserLoggedIn = true;
+            mChooseContactButton.setEnabled(true);
         } else {
             mUserStatusText.setText("Not logged in as");
             Log.d(TAG, "Not logged in");
             mIsUserLoggedIn = false;
+            mChooseContactButton.setEnabled(false);
         }
-    }
-
-    // TODO: temporary design, find minimal set of data
-    private class UserData {
-
-        private String mName;
-        private String mPhoneNumber;
-        private String mEmail;
-
-        public UserData(String phoneNumber, String name, String email) {
-            mPhoneNumber = phoneNumber;
-            mName = name;
-            mEmail = email;
-        }
-
-        public String getEmail() {
-            return mEmail;
-        }
-
-        public void setEmail(String email) {
-            mEmail = email;
-        }
-
-        public String getName() {
-            return mName;
-        }
-
-        public void setName(String name) {
-            mName = name;
-        }
-
-        public String getPhoneNumber() {
-            return mPhoneNumber;
-        }
-
-        public void setPhoneNumber(String phoneNumber) {
-            mPhoneNumber = phoneNumber;
+        if(mFireBaseUid!=null) {
+            mUsersReference.child(mFireBaseUid).child("status").setValue(mIsUserLoggedIn);
         }
     }
 }
