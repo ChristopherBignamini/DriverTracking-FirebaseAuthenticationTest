@@ -1,5 +1,6 @@
 package com.commutingcoder.firebaseauthenticationtest;
 
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
@@ -236,6 +237,11 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
 
+                // TODO: not sure about using MainActivity.this for context
+                // TODO: move in right place
+                Intent intent = new Intent(MainActivity.this, ChooseContactActivity.class);
+                startActivity(intent);
+
                 // Access list of app users
                 Query userQuery = mUsersReference.orderByKey();
                 userQuery.addListenerForSingleValueEvent(new ValueEventListener() {
@@ -294,7 +300,8 @@ public class MainActivity extends AppCompatActivity {
                             Log.d(TAG,"out");
                             for (cursor.moveToFirst();!cursor.isAfterLast();cursor.moveToNext()) {
                                 Log.d(TAG,"in");
-                                if(cursor.getString(1) == currentUserPhone) {
+                                Log.d(TAG,"cursor.getString(1) " + cursor.getString(1));
+                                if(cursor.getString(1).equals(currentUserPhone)) {
                                     mAppContacts.add(new UserData(cursor.getString(1),
                                             cursor.getString(0),
                                             appUsersStatus.get(userIndex)));
@@ -309,6 +316,7 @@ public class MainActivity extends AppCompatActivity {
                                     " phone: " + mAppContacts.get(userIndex).getPhoneNumber() +
                                     " status: " + mAppContacts.get(userIndex).getStatus());
                         }
+
 
                     }
 
@@ -407,7 +415,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void checkStatus() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser(); // TODO: bug, questo funziona anche senza connessione..
         if (user != null) {
             String email = user.getEmail();
 
