@@ -61,7 +61,6 @@ public class MainActivity extends AppCompatActivity {
     private boolean mIsPasswordValid;
     private boolean mIsUserLoggedIn;
     private String mFireBaseUid;
-    private List<UserData> mAppContacts;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,7 +94,6 @@ public class MainActivity extends AppCompatActivity {
         mIsEmailValid = false;
         mIsPhoneValid = false;
         mIsPasswordValid = false;
-        mAppContacts = new ArrayList<>();// TODO: add save/retrieval code accross lifetime steps (Local db?)
 
         // UI elements wiring
         mEmailEditText = (EditText) findViewById(R.id.email_edit_text);
@@ -293,8 +291,10 @@ public class MainActivity extends AppCompatActivity {
                                 .query(ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
                                         queryFields,null,null,null);
 
+                        // TODO: avoid multiple delete
+                        Users users = Users.get();// TODO: add save/retrieval code accross lifetime steps (Local db?)
+                        users.deleteAll();
                         // TODO: find best way to do this search and avoid multiple search
-                        mAppContacts.clear();
                         for(int userIndex=0;userIndex<appUsersPhones.size();++userIndex) {
                             final String currentUserPhone = new String(appUsersPhones.get(userIndex));
                             Log.d(TAG,"out");
@@ -302,19 +302,18 @@ public class MainActivity extends AppCompatActivity {
                                 Log.d(TAG,"in");
                                 Log.d(TAG,"cursor.getString(1) " + cursor.getString(1));
                                 if(cursor.getString(1).equals(currentUserPhone)) {
-                                    mAppContacts.add(new UserData(cursor.getString(1),
-                                            cursor.getString(0),
-                                            appUsersStatus.get(userIndex)));
+                                    users.addUserData(new UserData(cursor.getString(1),
+                                        cursor.getString(0), appUsersStatus.get(userIndex)));
                                 }
                             }
                         }
 
                         // TODO: Debug only
-                        for (int userIndex=0;userIndex<mAppContacts.size();++userIndex) {
+                        for (int userIndex=0;userIndex<users.getNumberUsers();++userIndex) {
                             Log.d(TAG,"Contact number: " + userIndex +
-                                    " name: " + mAppContacts.get(userIndex).getName() +
-                                    " phone: " + mAppContacts.get(userIndex).getPhoneNumber() +
-                                    " status: " + mAppContacts.get(userIndex).getStatus());
+                                    " name: " + users.getUserData(userIndex).getName() +
+                                    " phone: " + users.getUserData(userIndex).getPhoneNumber() +
+                                    " status: " + users.getUserData(userIndex).getStatus());
                         }
 
 
