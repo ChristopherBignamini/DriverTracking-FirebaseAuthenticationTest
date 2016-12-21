@@ -8,10 +8,8 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by bignamic on 16/12/16.
@@ -21,7 +19,7 @@ import java.util.List;
 public class ChooseContactActivity extends AppCompatActivity {
 
     private RecyclerView mRecyclerView;
-    private List<String> mContacts;//TODO: debug only
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -32,34 +30,6 @@ public class ChooseContactActivity extends AppCompatActivity {
         mRecyclerView = (RecyclerView) findViewById(R.id.contact_list_recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Retrieve contact list
-        mContacts = new ArrayList<>();
-        mContacts.add("q");
-        mContacts.add("w");
-        mContacts.add("e");
-        mContacts.add("r");
-        mContacts.add("t");
-        mContacts.add("y");
-        mContacts.add("u");
-        mContacts.add("i");
-        mContacts.add("o");
-        mContacts.add("p");
-        mContacts.add("a");
-        mContacts.add("s");
-        mContacts.add("d");
-        mContacts.add("f");
-        mContacts.add("g");
-        mContacts.add("h");
-        mContacts.add("j");
-        mContacts.add("k");
-        mContacts.add("l");
-        mContacts.add("z");
-        mContacts.add("x");
-        mContacts.add("c");
-        mContacts.add("v");
-        mContacts.add("b");
-        mContacts.add("n");
-
         // Set adapter
         ContactAdapter contactAdapter = new ContactAdapter();
         mRecyclerView.setAdapter(contactAdapter);
@@ -69,10 +39,15 @@ public class ChooseContactActivity extends AppCompatActivity {
     private class ContactHolder extends RecyclerView.ViewHolder {
 
         public TextView mContactName;
+        public TextView mContactPhone;
+        public ImageView mContactStatusImageView;
 
         ContactHolder(View itemView) {
             super(itemView);
-            mContactName = (TextView) itemView;
+//            mContactName = (TextView) itemView;
+            mContactName = (TextView) itemView.findViewById(R.id.contact_name_text_view);
+            mContactPhone = (TextView) itemView.findViewById(R.id.contact_phone_text_view);
+            mContactStatusImageView = (ImageView) itemView.findViewById(R.id.contact_status_image);
         }
     }
 
@@ -82,20 +57,30 @@ public class ChooseContactActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(ContactHolder holder, int position) {
-            holder.mContactName.setText(mContacts.get(position));
+            holder.mContactName.setText(Users.get().getUserData(position).getName());
+            holder.mContactPhone.setText(Users.get().getUserData(position).getPhoneNumber());
+            if(Users.get().getUserData(position).getStatus() == true) {
+                holder.mContactStatusImageView.setImageDrawable(
+                        getResources().getDrawable(R.drawable.user_status_online));
+            } else {
+                holder.mContactStatusImageView.setImageDrawable(
+                        getResources().getDrawable(R.drawable.user_status_offline));
+            }
         }
 
         @Override
         public ContactHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             LayoutInflater layoutInflater = LayoutInflater.from(ChooseContactActivity.this);// TODO: not sure about ChooseContactActivity.this
+//            View view = layoutInflater
+//                    .inflate(android.R.layout.simple_list_item_1, parent, false);// TODO: perche' non e' una text view? Perche' qua si aspetta un intero layout!
             View view = layoutInflater
-                    .inflate(android.R.layout.simple_list_item_1, parent, false);// TODO: perche' nonne' una text view?
+                    .inflate(R.layout.contact_list_item, parent, false);
             return new ContactHolder(view);
         }
 
         @Override
         public int getItemCount() {
-            return mContacts.size();
+            return Users.get().getNumberUsers();
         }
     }
 
