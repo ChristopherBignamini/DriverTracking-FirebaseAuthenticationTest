@@ -9,11 +9,13 @@ class UserData {
 
     private String mName;
     private String mPhoneNumber;
+    private String mFirebaseDBId;
     private Boolean mStatus;
 
-    public UserData(String phoneNumber, String name, Boolean status) {
+    public UserData(String phoneNumber, String name, String firebaseDBId, Boolean status) {
         mPhoneNumber = phoneNumber;
         mName = name;
+        mFirebaseDBId = firebaseDBId;
         mStatus = status;
     }
 
@@ -23,6 +25,14 @@ class UserData {
 
     public void setName(String name) {
         mName = name;
+    }
+
+    public String getFirebaseDBId() {
+        return mFirebaseDBId;
+    }
+
+    public void setFirebaseDBId(String firebaseDBId) {
+        mFirebaseDBId = firebaseDBId;
     }
 
     public String getPhoneNumber() {
