@@ -19,6 +19,8 @@
         </activity>
         <activity android:name=".ChooseContactActivity">
         </activity>
+        <activity android:name=".DialogWithContactActivity">
+        </activity>
     </application>
 
 </manifest>

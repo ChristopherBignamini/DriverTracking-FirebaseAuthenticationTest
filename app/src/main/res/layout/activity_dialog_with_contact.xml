@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:id="@+id/activity_dialog_with_contact"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    android:orientation="vertical"
+    tools:context="com.commutingcoder.firebaseauthenticationtest.DialogWithContactActivity">
+
+    <TextView
+        android:id="@+id/my_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:text="You are not connected to services"/>
+
+    <TextView
+        android:id="@+id/other_status_text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        tools:text="Your contact is not connected to services"/>
+
+</LinearLayout>
