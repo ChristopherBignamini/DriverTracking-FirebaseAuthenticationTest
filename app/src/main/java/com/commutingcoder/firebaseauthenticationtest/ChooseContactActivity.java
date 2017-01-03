@@ -38,7 +38,6 @@ public class ChooseContactActivity extends AppCompatActivity {
     private static final String TAG = "ChooseContactActivity";
     public static final String CONTACT_CHOSEN =
             "com.commutingcoder.android.firebaseauthenticationtest.contact_chosen";
-    private final static int CHOOSE_CONTACT = 1;
     private final static int MY_PERMISSIONS_READ_CONTACTS = 0;
     private RecyclerView mRecyclerView;
     private DatabaseReference mUsersReference;
@@ -165,7 +164,12 @@ public class ChooseContactActivity extends AppCompatActivity {
     static public int getContactIndex(Intent intent) {
         return intent.getIntExtra(CONTACT_CHOSEN,0);
     }
-    
+
+    // TODO: is this a safe solution (the name of the class as string would be enough)
+    static public boolean isLaunchingActivity(Intent intent) {
+        return intent.hasExtra(CONTACT_CHOSEN);
+    }
+
     // What we see in the rec. view is the itemView of the ViewHolder. And we access its widgets
     // by calling its find...ById method.
     private class ContactHolder extends RecyclerView.ViewHolder
