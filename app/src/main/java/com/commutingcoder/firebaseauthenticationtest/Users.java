@@ -12,6 +12,7 @@ public class Users {
 
     private static Users sUsers;
     private List<UserData> mUsersData;
+    private String mMyFirebaseDBUid;// This should not be here, why not adding my user to the list?
 
     public static Users get() {
         if (sUsers == null) {
@@ -40,5 +41,13 @@ public class Users {
 
     public void deleteAll() {
         mUsersData.clear();
+    }
+
+    public String getmMyFirebaseDBUid() {
+        return mMyFirebaseDBUid;
+    }
+
+    public void setmMyFirebaseDBUid(String myFirebaseDBUid) {
+        mMyFirebaseDBUid = myFirebaseDBUid;
     }
 }
