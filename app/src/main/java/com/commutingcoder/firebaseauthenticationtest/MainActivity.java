@@ -23,7 +23,11 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.OnDisconnect;
+import com.google.firebase.database.Query;
 import com.google.firebase.database.ValueEventListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 // TODO: online-offline status in user data-db: what about a singleton like in CriminalIntent
 // TODO: use a local sqlite db for current list of available contacts??
@@ -31,10 +35,16 @@ import com.google.firebase.database.ValueEventListener;
 public class MainActivity extends AppCompatActivity {
 
     private final String TAG = "MainActivity";
+    // TODO: add "index" to variable name
+    public static final String INVITING_CONTACT =
+            "com.commutingcoder.android.firebaseauthenticationtest.inviting_contact";
     private FirebaseAuth mAuth;
     private FirebaseAuth.AuthStateListener mAuthListener;
     private DatabaseReference mUsersReference;
     private DatabaseReference mConnectionReference;
+    private Query mInvitedDialogQuery;
+    private ValueEventListener mInvitedDialogListener;
+    private ValueEventListener mConnectionListener;
 
 
     private EditText mEmailEditText;
@@ -73,6 +83,28 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG, "onAuthStateChanged:signed_out");
                 }
                 // ...
+            }
+        };
+
+        // TODO: should we put these definition in onStart/onResume? Or are they conserved during activity stop, pause?
+        mConnectionListener = new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                boolean connected = dataSnapshot.child("connected").getValue(Boolean.class);
+                if (connected) {
+                    Log.i(TAG, "User connected");
+                } else {
+                    Log.i(TAG, "User disconnected");
+                }
+
+                OnDisconnect onDisconnect = mUsersReference.child(mFireBaseUid).child("status").onDisconnect();
+                onDisconnect.setValue(false);
+
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
             }
         };
 
@@ -227,19 +259,53 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // TODO: find final place for this call
-        checkAuthenticationStatus();
-        checkConnectionStatus();
+//        // TODO: find final place for this call
+//        checkAuthenticationStatus();
+//        checkConnectionStatus();
+
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+
         mAuth.addAuthStateListener(mAuthListener);
 
         // Check current user status
         checkAuthenticationStatus();
         checkConnectionStatus();
+
+        // TODO: all the connection/autentication stuff mnust be redesigned
+        mConnectionReference.addValueEventListener(mConnectionListener);
+
+        // TODO: find final position for this
+        mInvitedDialogQuery = mUsersReference.child(mFireBaseUid).child("joined_sessions");
+        mInvitedDialogListener = mInvitedDialogQuery.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+
+                List<String> invitedDialogUserUids = new ArrayList<String>();
+                for (DataSnapshot singleSnapshot : dataSnapshot.getChildren()) {
+                    if (singleSnapshot.getValue().equals("true") ) {
+                        invitedDialogUserUids.add(singleSnapshot.getKey());
+                    }
+                }
+                Log.i(TAG,"Still listening to invitations");
+
+                // TODO: for the time being we just consider the first invitation
+                if (invitedDialogUserUids.size()>0) {
+                    Intent intent = new Intent(MainActivity.this, DialogWithContactActivity.class);
+                    intent.putExtra(INVITING_CONTACT, invitedDialogUserUids.get(0));
+                    startActivity(intent);
+                }
+            }
+
+            @Override
+            public void onCancelled(DatabaseError databaseError) {
+
+            }
+        });
+
     }
 
     @Override
@@ -252,6 +318,15 @@ public class MainActivity extends AppCompatActivity {
 
         // Set the user as not signedIn // TODO: temporary solution, use IntentService or similar
         mIsUserSignedIn = false;
+
+        // TODO: put this stuff in the right place
+        mInvitedDialogQuery.removeEventListener(mInvitedDialogListener);
+        if (mConnectionListener != null) { // TODO
+            mConnectionReference.removeEventListener(mConnectionListener);
+        }
+
+        Log.i(TAG,"Listeners removed");
+
     }
 
     @Override
@@ -281,6 +356,7 @@ public class MainActivity extends AppCompatActivity {
                         // Update user database
                         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
                         mFireBaseUid = user.getUid();
+                        Users.get().setmMyFirebaseDBUid(mFireBaseUid);
                         mUsersReference.child(mFireBaseUid).child("email").setValue(user.getEmail());// TODO: is Uid fine as node?
                         // TODO: is there a way to get my phone number from contact list??
                         mUsersReference.child(mFireBaseUid).child("phone").setValue(phoneNumber);
@@ -337,6 +413,7 @@ public class MainActivity extends AppCompatActivity {
             // authenticate with your backend server, if you have one. Use
             // FirebaseUser.getToken() instead.
             mFireBaseUid = user.getUid(); // TODO: this assignement is already done in createAccount
+            Users.get().setmMyFirebaseDBUid(mFireBaseUid);// TODO: also this assignement is already done in createAccount
             Log.i(TAG, "User signed in with email: " + email);
             mUserStatusText.setText("Signed in with email " + email);
             mIsUserSignedIn = true;
@@ -358,28 +435,6 @@ public class MainActivity extends AppCompatActivity {
             if(mIsUserSignedIn == true) {
                 Log.i(TAG, "Update user status on db");
                 mUsersReference.child(mFireBaseUid).child("status").setValue(mIsUserSignedIn);
-
-                // TODO: don't do this every time
-                mConnectionReference.addValueEventListener(new ValueEventListener() {
-                    @Override
-                    public void onDataChange(DataSnapshot dataSnapshot) {
-                        boolean connected = dataSnapshot.child("connected").getValue(Boolean.class);
-                        if (connected) {
-                            Log.i(TAG, "User connected");
-                        } else {
-                            Log.i(TAG, "User disconnected");
-                        }
-
-                        OnDisconnect onDisconnect = mUsersReference.child(mFireBaseUid).child("status").onDisconnect();
-                        onDisconnect.setValue(false);
-
-                    }
-
-                    @Override
-                    public void onCancelled(DatabaseError databaseError) {
-
-                    }
-                });
                 mChooseContactButton.setEnabled(true);
 
             }
@@ -391,6 +446,15 @@ public class MainActivity extends AppCompatActivity {
             mIsUserConnected = false;
             mChooseContactButton.setEnabled(false);
         }
-
     }
+
+    // TODO: is this a safe solution (the name of the class as string would be enough)
+    static public boolean isLaunchingActivity(Intent intent) {
+        return intent.hasExtra(INVITING_CONTACT);
+    }
+
+    static public String getInvitingContactFirebaseUid(Intent intent) {
+        return intent.getStringExtra(INVITING_CONTACT);
+    }
+
 }
