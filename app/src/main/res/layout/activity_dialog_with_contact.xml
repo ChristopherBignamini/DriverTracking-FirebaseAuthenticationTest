@@ -25,4 +25,89 @@
         android:layout_height="wrap_content"
         tools:text="Your contact is not connected to services"/>
 
+    <LinearLayout
+        android:id="@+id/my_position"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="1">
+
+        <EditText
+            android:id="@+id/my_latitude_text"
+            android:layout_weight="0.5"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Latitude"/>
+
+        <EditText
+            android:id="@+id/my_longitude_text"
+            android:layout_weight="0.5"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Longitude"/>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/update_my_position_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Update my position"/>
+
+    <LinearLayout
+        android:id="@+id/other_position"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:weightSum="1">
+
+        <TextView
+            android:id="@+id/other_latitude_text"
+            android:layout_weight="0.5"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Latitude"/>
+
+        <TextView
+            android:id="@+id/other_longitude_text"
+            android:layout_weight="0.5"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:hint="Longitude"/>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/record_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Record audio"/>
+
+    <Button
+        android:id="@+id/play_my_record_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Play my audio"/>
+
+    <Button
+        android:id="@+id/send_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send audio"/>
+
+    <Button
+        android:id="@+id/play_other_record_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Play other audio"/>
+
+    <Button
+        android:id="@+id/receive_button"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Receive audio"/>
+
+
 </LinearLayout>
+
+

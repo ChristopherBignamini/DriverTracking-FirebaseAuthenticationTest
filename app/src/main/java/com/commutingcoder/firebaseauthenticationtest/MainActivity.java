@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         mAuthListener = new FirebaseAuth.AuthStateListener() {
             @Override
+            // TODO: durante l'avvio dell'app passiamo di qua 4 volte, perche?
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if (user != null) {
@@ -83,28 +84,6 @@ public class MainActivity extends AppCompatActivity {
                     Log.i(TAG, "onAuthStateChanged:signed_out");
                 }
                 // ...
-            }
-        };
-
-        // TODO: should we put these definition in onStart/onResume? Or are they conserved during activity stop, pause?
-        mConnectionListener = new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                boolean connected = dataSnapshot.child("connected").getValue(Boolean.class);
-                if (connected) {
-                    Log.i(TAG, "User connected");
-                } else {
-                    Log.i(TAG, "User disconnected");
-                }
-
-                OnDisconnect onDisconnect = mUsersReference.child(mFireBaseUid).child("status").onDisconnect();
-                onDisconnect.setValue(false);
-
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
             }
         };
 
@@ -271,40 +250,10 @@ public class MainActivity extends AppCompatActivity {
 
         mAuth.addAuthStateListener(mAuthListener);
 
+        // TODO: all the connection/autentication stuff mnust be redesigned
         // Check current user status
         checkAuthenticationStatus();
         checkConnectionStatus();
-
-        // TODO: all the connection/autentication stuff mnust be redesigned
-        mConnectionReference.addValueEventListener(mConnectionListener);
-
-        // TODO: find final position for this
-        mInvitedDialogQuery = mUsersReference.child(mFireBaseUid).child("joined_sessions");
-        mInvitedDialogListener = mInvitedDialogQuery.addValueEventListener(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-
-                List<String> invitedDialogUserUids = new ArrayList<String>();
-                for (DataSnapshot singleSnapshot : dataSnapshot.getChildren()) {
-                    if (singleSnapshot.getValue().equals("true") ) {
-                        invitedDialogUserUids.add(singleSnapshot.getKey());
-                    }
-                }
-                Log.i(TAG,"Still listening to invitations");
-
-                // TODO: for the time being we just consider the first invitation
-                if (invitedDialogUserUids.size()>0) {
-                    Intent intent = new Intent(MainActivity.this, DialogWithContactActivity.class);
-                    intent.putExtra(INVITING_CONTACT, invitedDialogUserUids.get(0));
-                    startActivity(intent);
-                }
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-
-            }
-        });
 
     }
 
@@ -321,9 +270,12 @@ public class MainActivity extends AppCompatActivity {
 
         // TODO: put this stuff in the right place
         mInvitedDialogQuery.removeEventListener(mInvitedDialogListener);
-        if (mConnectionListener != null) { // TODO
-            mConnectionReference.removeEventListener(mConnectionListener);
-        }
+        mInvitedDialogListener = null;
+        // TODO: what about this listener removal?
+//        if (mConnectionListener != null) { // TODO
+//            mConnectionReference.removeEventListener(mConnectionListener);
+//            mConnectionListener = null;// TODO: is this correct/needed
+//        }
 
         Log.i(TAG,"Listeners removed");
 
@@ -333,6 +285,69 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         Log.i(TAG,"onDestroy");
+    }
+
+    private void setInvitedDialogListener() {
+        mInvitedDialogQuery = mUsersReference.child(mFireBaseUid).child("joined_sessions");
+
+        if (mInvitedDialogListener == null) {
+            mInvitedDialogListener = mInvitedDialogQuery.addValueEventListener(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+
+                    List<String> invitedDialogUserUids = new ArrayList<String>();
+                    for (DataSnapshot singleSnapshot : dataSnapshot.getChildren()) {
+                        if (singleSnapshot.getValue().equals("true")) {
+                            invitedDialogUserUids.add(singleSnapshot.getKey());
+                        }
+                    }
+                    Log.i(TAG, "Still listening to invitations");
+
+                    // TODO: for the time being we just consider the first invitation
+                    if (invitedDialogUserUids.size() > 0) {
+                        Intent intent = new Intent(MainActivity.this, DialogWithContactActivity.class);
+                        intent.putExtra(INVITING_CONTACT, invitedDialogUserUids.get(0));
+                        startActivity(intent);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            });
+        }
+    }
+
+    private void setConnectionListener() {
+
+        if (mConnectionListener == null) {
+            mConnectionListener = new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot dataSnapshot) {
+                    boolean connected = dataSnapshot.child("connected").getValue(Boolean.class);
+                    if (connected) {
+                        Log.i(TAG, "User connected");
+                    } else {
+                        Log.i(TAG, "User disconnected");
+                    }
+
+                    // TODO: find correct place for this: basically we need to make all this calls involving mFirebaseUid
+                    // only when we know that the ID is not null. This number is available only after the first login! let's
+                    // factorize them in a single function
+                    if (mFireBaseUid != null) {
+                        OnDisconnect onDisconnect = mUsersReference.child(mFireBaseUid).child("status").onDisconnect();
+                        onDisconnect.setValue(false);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError databaseError) {
+
+                }
+            };
+            mConnectionReference.addValueEventListener(mConnectionListener);
+        }
     }
 
     // TODO: input pars not needed, can be obtained from data member
@@ -421,12 +436,20 @@ public class MainActivity extends AppCompatActivity {
             mUserStatusText.setText("Not signed in");
             Log.i(TAG, "Not signed in");
             mIsUserSignedIn = false;
+            if (mFireBaseUid != null) {
+                // TODO: avoid all these checks in the code: the correct strategy is based on the
+                // usage of connection and authentication listeners
+                // TODO: cosa succede se si fa lo user switch senza prima sloggarsi?
+                mUsersReference.child(mFireBaseUid).child("status").setValue(false);
+            }
         }
+
     }
 
     private void checkConnectionStatus() {
 
         // Setup reference to rt database
+        // TODO: BUG! All this stuff is local, real connection to db not guaranteed!
         final FirebaseDatabase database = FirebaseDatabase.getInstance();
         if (database != null) {
             mConnectionReference = database.getReference(".info");
@@ -445,6 +468,16 @@ public class MainActivity extends AppCompatActivity {
             mUsersReference = null;
             mIsUserConnected = false;
             mChooseContactButton.setEnabled(false);
+        }
+
+        // TODO: find final position for this
+        if(mFireBaseUid != null) {
+            setInvitedDialogListener();
+        }
+
+        // TODO: should we put these definition in onStart/onResume? Or are they conserved during activity stop, pause?
+        if(mIsUserConnected) {
+            setConnectionListener();
         }
     }
 
